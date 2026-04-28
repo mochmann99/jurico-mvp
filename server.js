@@ -4,6 +4,22 @@ const pool = new Pool({
 connectionString: process.env.DATABASE_URL,
 ssl: { rejectUnauthorized: false }
 })
+async function initDB() {
+try {
+await pool.query(`       CREATE TABLE IF NOT EXISTS leads (
+        id SERIAL PRIMARY KEY,
+        name TEXT,
+        email TEXT,
+        phone TEXT,
+        message TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `)
+console.log("✅ DB bereit")
+} catch (err) {
+console.error("❌ DB Fehler:", err)
+}
+}
 
 const pool = new Pool({
   await pool.query(`  CREATE TABLE IF NOT EXISTS leads (

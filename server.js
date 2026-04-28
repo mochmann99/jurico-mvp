@@ -2,6 +2,15 @@ import pkg from 'pg'
 const { Pool } = pkg
 
 const pool = new Pool({
+  await pool.query(`  CREATE TABLE IF NOT EXISTS leads (
+    id SERIAL PRIMARY KEY,
+    name TEXT,
+    email TEXT,
+    phone TEXT,
+    message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );`)
+
 connectionString: process.env.DATABASE_URL,
 ssl: { rejectUnauthorized: false }
 })

@@ -1,14 +1,14 @@
-services:
-  - type: web
-    name: jurico-mvp
-    env: node
-    plan: starter
-    buildCommand: npm install
-    startCommand: npm start
-    envVars:
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
+{
+"name": "jurico-ai",
+"version": "1.0.0",
+"type": "module",
+"scripts": {
+"start": "node server.js"
+},
+"dependencies": {
+"express": "^4.18.3",
+"pg": "^8.11.5",
+"openai": "^4.0.0",
+"axios": "^1.6.0"
+}
+}

@@ -2,8 +2,13 @@ import express from 'express'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import pkg from 'pg'
+import OpenAI from 'openai'
 
 const { Pool } = pkg
+
+const openai = new OpenAI({
+apiKey: process.env.OPENAI_API_KEY
+})
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -33,59 +38,19 @@ res.setHeader('WWW-Authenticate', 'Basic realm="Login Required"')
 return res.status(401).end()
 })
 
-// ======================
-// 📊 METRICS
-// ======================
-let metrics = {
-requests: 0,
-errors: 0,
-avgResponseTime: 0
-}
-
-// ======================
-// ⚡ REQUEST TRACKING
-// ======================
-app.use((req, res, next) => {
-const start = Date.now()
-metrics.requests++
-
-res.on('finish', () => {
-const duration = Date.now() - start
-metrics.avgResponseTime =
-(metrics.avgResponseTime * (metrics.requests - 1) + duration) / metrics.requests
-
-```
-if (res.statusCode >= 400) metrics.errors++
-```
-
-})
-
-console.log(JSON.stringify({
-time: new Date().toISOString(),
-method: req.method,
-url: req.url
-}))
-
-next()
-})
-
-// ======================
-// ⚙️ MIDDLEWARE
-// ======================
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
 // ======================
-// 🗄️ DB
+// 🗄️ DATABASE
 // ======================
 const pool = new Pool({
 connectionString: process.env.DATABASE_URL,
-ssl: { rejectUnauthorized: false },
-max: 10 // Connection Pooling
+ssl: { rejectUnauthorized: false }
 })
 
 // ======================
-// 🔧 DB INIT
+// 🔧 INIT DB
 // ======================
 async function initDB() {
 await pool.query(`     CREATE TABLE IF NOT EXISTS leads (
@@ -94,140 +59,90 @@ await pool.query(`     CREATE TABLE IF NOT EXISTS leads (
       email TEXT,
       phone TEXT,
       message TEXT,
+      analysis TEXT,
+      score INTEGER,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `)
-
 console.log("DB ready")
 }
 
 // ======================
-// ⚡ CACHE
+// 🤖 AI ANALYSIS
 // ======================
-let cache = {
-dashboard: null,
-timestamp: 0
+async function analyzeText(text) {
+const completion = await openai.chat.completions.create({
+model: "gpt-4o-mini",
+messages: [
+{
+role: "system",
+content: "Du bist ein juristischer Assistent. Bewerte Fälle von 1-10 und gib eine kurze Analyse."
+},
+{
+role: "user",
+content: text
+}
+]
+})
+
+const output = completion.choices[0].message.content
+
+const scoreMatch = output.match(/\d+/)
+const score = scoreMatch ? parseInt(scoreMatch[0]) : 5
+
+return { analysis: output, score }
 }
 
-const CACHE_TTL = 5000 // 5 Sekunden
-
 // ======================
-// 💾 SAVE LEAD
+// 💾 SAVE LEAD + AI
 // ======================
-app.post('/api/leads', async (req, res, next) => {
-try {
+app.post('/api/leads', async (req, res) => {
 const { name, email, phone, message } = req.body
+
+try {
+const ai = await analyzeText(message)
 
 ```
 await pool.query(
-  'INSERT INTO leads (name, email, phone, message) VALUES ($1, $2, $3, $4)',
-  [name, email, phone, message]
+  `INSERT INTO leads (name, email, phone, message, analysis, score)
+   VALUES ($1, $2, $3, $4, $5, $6)`,
+  [name, email, phone, message, ai.analysis, ai.score]
 )
 
-cache.dashboard = null // Cache invalidieren
-
-res.json({ success: true })
+res.json({ success: true, ai })
 ```
 
 } catch (err) {
-next(err)
+console.error(err)
+res.status(500).json({ error: "AI Fehler" })
 }
 })
 
 // ======================
-// 📊 DASHBOARD (MIT CACHE)
+// 📊 DASHBOARD
 // ======================
-app.get('/api/dashboard', async (req, res, next) => {
-try {
-const now = Date.now()
+app.get('/api/dashboard', async (req, res) => {
+const result = await pool.query(`     SELECT name, message, analysis, score
+    FROM leads
+    ORDER BY created_at DESC
+    LIMIT 5
+  `)
 
-```
-if (cache.dashboard && (now - cache.timestamp < CACHE_TTL)) {
-  return res.json(cache.dashboard)
-}
-
-const count = await pool.query('SELECT COUNT(*) FROM leads')
-const latest = await pool.query(
-  'SELECT * FROM leads ORDER BY created_at DESC LIMIT 5'
-)
-
-const data = {
-  totalLeads: count.rows[0].count,
-  latestLeads: latest.rows
-}
-
-cache.dashboard = data
-cache.timestamp = now
-
-res.json(data)
-```
-
-} catch (err) {
-next(err)
-}
-})
-
-// ======================
-// 📈 KPI
-// ======================
-app.get('/api/kpi', async (req, res, next) => {
-try {
-const result = await pool.query(`       SELECT DATE(created_at) as date, COUNT(*) as count
-      FROM leads
-      GROUP BY date
-      ORDER BY date DESC
-      LIMIT 7
-    `)
-
-```
 res.json(result.rows)
-```
-
-} catch (err) {
-next(err)
-}
 })
 
 // ======================
-// 📊 METRICS
-// ======================
-app.get('/metrics', (req, res) => {
-res.json(metrics)
-})
-
-// ======================
-// 🌐 STATIC
+// 🌐 STATIC FILES
 // ======================
 app.use(express.static(path.join(__dirname, 'public')))
 
 // ======================
-// HEALTH
-// ======================
-app.get('/health', (req, res) => res.send('ok'))
-
-// ======================
-// ROOT
-// ======================
-app.get('/', (req, res) => {
-res.sendFile(path.join(__dirname, 'public', 'index.html'))
-})
-
-// ======================
-// ❌ ERROR HANDLER
-// ======================
-app.use((err, req, res, next) => {
-console.error("ERROR:", err)
-metrics.errors++
-res.status(500).json({ error: "Internal Server Error" })
-})
-
-// ======================
-// 🚀 START
+// START SERVER
 // ======================
 const PORT = process.env.PORT || 10000
 
 initDB().then(() => {
 app.listen(PORT, () => {
-console.log(`Optimized server running on ${PORT}`)
+console.log("AI System läuft auf Port " + PORT)
 })
 })

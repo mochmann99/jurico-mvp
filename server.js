@@ -1,17 +1,8 @@
 import express from 'express'
-
 const app = express()
 
-app.get('/', (req, res) => {
-res.send('JURICO läuft')
+app.get('*', (req, res) => {
+res.send("SERVER AKTIV: " + req.url)
 })
 
-app.get('/test-import', (req, res) => {
-res.send('✅ TEST IMPORT OK')
-})
-
-const PORT = process.env.PORT || 10000
-
-app.listen(PORT, () => {
-console.log('Server läuft auf Port ' + PORT)
-})
+app.listen(process.env.PORT || 10000)

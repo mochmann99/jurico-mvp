@@ -1,21 +1,11 @@
 import express from 'express'
-import path from 'path'
-import { fileURLToPath } from 'url'
 import pkg from 'pg'
 import OpenAI from 'openai'
 import axios from 'axios'
 
 const { Pool } = pkg
 
-const openai = new OpenAI({
-apiKey: process.env.OPENAI_API_KEY
-})
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
 const app = express()
-
 app.use(express.json())
 
 // ======================
@@ -27,11 +17,19 @@ ssl: { rejectUnauthorized: false }
 })
 
 // ======================
-// 🔧 DB INIT
+// 🤖 OPENAI
+// ======================
+const openai = new OpenAI({
+apiKey: process.env.OPENAI_API_KEY
+})
+
+// ======================
+// 🔧 INIT DB
 // ======================
 async function initDB() {
 await pool.query(`     CREATE TABLE IF NOT EXISTS leads (
       id SERIAL PRIMARY KEY,
+      email_id TEXT UNIQUE,
       name TEXT,
       email TEXT,
       message TEXT,
@@ -43,7 +41,7 @@ await pool.query(`     CREATE TABLE IF NOT EXISTS leads (
 }
 
 // ======================
-// 🤖 AI
+// 🤖 AI ANALYSE
 // ======================
 async function analyzeText(text) {
 const completion = await openai.chat.completions.create({
@@ -79,17 +77,18 @@ return res.data.access_token
 }
 
 // ======================
-// 📧 MAILS LESEN
+// 📧 EMAILS LADEN (FIXED)
 // ======================
 async function fetchEmails() {
 const token = await getAccessToken()
 
-const res = await axios.get(
-"https://graph.microsoft.com/v1.0/me/messages?$top=5",
-{
+const url = `https://graph.microsoft.com/v1.0/users/${process.env.MS_USER_EMAIL}/messages?$top=5`
+
+const res = await axios.get(url, {
 headers: { Authorization: `Bearer ${token}` }
-}
-)
+})
+
+console.log("📨 Emails gefunden:", res.data.value.length)
 
 return res.data.value
 }
@@ -103,16 +102,26 @@ const mails = await fetchEmails()
 
 ```
 for (const mail of mails) {
+  const id = mail.id
   const text = mail.body?.content || ""
 
   if (!text) continue
 
+  // doppelte vermeiden
+  const exists = await pool.query(
+    'SELECT id FROM leads WHERE email_id=$1',
+    [id]
+  )
+
+  if (exists.rows.length > 0) continue
+
   const ai = await analyzeText(text)
 
   await pool.query(
-    `INSERT INTO leads (name, email, message, analysis, score)
-     VALUES ($1, $2, $3, $4, $5)`,
+    `INSERT INTO leads (email_id, name, email, message, analysis, score)
+     VALUES ($1,$2,$3,$4,$5,$6)`,
     [
+      id,
       mail.from?.emailAddress?.name || "Unknown",
       mail.from?.emailAddress?.address || "",
       text,
@@ -120,13 +129,13 @@ for (const mail of mails) {
       ai.score
     ]
   )
-}
 
-console.log("Emails importiert")
+  console.log("✅ Mail importiert:", mail.subject)
+}
 ```
 
 } catch (err) {
-console.error("Mail Fehler:", err.message)
+console.error("❌ MAIL FEHLER:", err.response?.data || err.message)
 }
 }
 
@@ -134,7 +143,7 @@ console.error("Mail Fehler:", err.message)
 setInterval(importEmails, 60000)
 
 // ======================
-// DASHBOARD
+// 📊 DASHBOARD
 // ======================
 app.get('/api/dashboard', async (req, res) => {
 const result = await pool.query(`     SELECT name, message, analysis, score
@@ -147,12 +156,20 @@ res.json(result.rows)
 })
 
 // ======================
+// TEST ENDPOINT (wichtig!)
+// ======================
+app.get('/test-import', async (req, res) => {
+await importEmails()
+res.send("Import ausgelöst")
+})
+
+// ======================
 // START
 // ======================
 const PORT = process.env.PORT || 10000
 
 initDB().then(() => {
 app.listen(PORT, () => {
-console.log("Outlook AI System läuft")
+console.log("🚀 System läuft")
 })
 })

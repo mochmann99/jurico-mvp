@@ -1,5 +1,5 @@
 {
-"name": "jurico-ai",
+"name": "jurico-node-final",
 "version": "1.0.0",
 "type": "module",
 "scripts": {
@@ -8,6 +8,7 @@
 "dependencies": {
 "express": "^4.18.3",
 "pg": "^8.11.5",
-"openai": "^4.0.0"
+"openai": "^4.0.0",
+"axios": "^1.6.0"
 }
 }

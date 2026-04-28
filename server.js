@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename)
 
 const app = express()
 
-// 🔐 LOGIN
+// 🔐 LOGIN (Basic Auth)
 app.use((req, res, next) => {
 const user = process.env.JURICO_USER || "admin"
 const pass = process.env.JURICO_PASSWORD || "1234"
@@ -98,7 +98,7 @@ res.status(500).json({ error: 'DB error' })
 }
 })
 
-// 🌐 STATIC
+// 🌐 STATIC FILES (deine bestehende UI bleibt!)
 app.use(express.static(path.join(__dirname, 'public')))
 
 // HEALTH
@@ -109,7 +109,7 @@ app.get('/', (req, res) => {
 res.sendFile(path.join(__dirname, 'public', 'index.html'))
 })
 
-// START
+// 🚀 START
 const PORT = process.env.PORT || 10000
 
 initDB().then(() => {

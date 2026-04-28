@@ -4,7 +4,6 @@ import OpenAI from 'openai'
 import axios from 'axios'
 
 const { Pool } = pkg
-
 const app = express()
 app.use(express.json())
 
@@ -38,6 +37,7 @@ await pool.query(`     CREATE TABLE IF NOT EXISTS leads (
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `)
+console.log("✅ DB ready")
 }
 
 // ======================
@@ -77,7 +77,7 @@ return res.data.access_token
 }
 
 // ======================
-// 📧 EMAILS LADEN (FIXED)
+// 📧 EMAILS LADEN
 // ======================
 async function fetchEmails() {
 const token = await getAccessToken()
@@ -107,7 +107,6 @@ for (const mail of mails) {
 
   if (!text) continue
 
-  // doppelte vermeiden
   const exists = await pool.query(
     'SELECT id FROM leads WHERE email_id=$1',
     [id]
@@ -139,8 +138,23 @@ console.error("❌ MAIL FEHLER:", err.response?.data || err.message)
 }
 }
 
-// läuft alle 60 Sekunden
+// ======================
+// ⏱ AUTO IMPORT
+// ======================
 setInterval(importEmails, 60000)
+
+// ======================
+// 🧪 TEST ENDPOINT
+// ======================
+app.get('/test-import', async (req, res) => {
+try {
+await importEmails()
+res.send("✅ Import gestartet – check Logs")
+} catch (err) {
+console.error(err)
+res.status(500).send("❌ Fehler beim Import")
+}
+})
 
 // ======================
 // 📊 DASHBOARD
@@ -156,20 +170,12 @@ res.json(result.rows)
 })
 
 // ======================
-// TEST ENDPOINT (wichtig!)
-// ======================
-app.get('/test-import', async (req, res) => {
-await importEmails()
-res.send("Import ausgelöst")
-})
-
-// ======================
-// START
+// 🚀 START
 // ======================
 const PORT = process.env.PORT || 10000
 
 initDB().then(() => {
 app.listen(PORT, () => {
-console.log("🚀 System läuft")
+console.log("🚀 System läuft auf Port " + PORT)
 })
 })

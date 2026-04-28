@@ -44,5 +44,5 @@ res.sendFile(path.join(__dirname, 'public', 'index.html'))
 const PORT = process.env.PORT || 10000
 
 app.listen(PORT, () => {
-console.log("Server läuft")
+console.log("Server läuft sauber")
 })

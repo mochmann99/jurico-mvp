@@ -4,6 +4,12 @@ import dotenv from "dotenv";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 
+"dependencies": {
+"express": "^4.18.3",
+"cors": "^2.8.5"
+}
+
+
 dotenv.config();
 
 const app = express();

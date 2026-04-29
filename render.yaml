@@ -1,14 +1,9 @@
-{
-"name": "jurico-ai",
-"version": "1.0.0",
-"type": "module",
-"scripts": {
-"start": "node server.js"
-},
-"dependencies": {
-"express": "^4.18.3",
-"pg": "^8.11.5",
-"openai": "^4.0.0",
-"axios": "^1.6.0"
-}
-}
+services:
+  - type: web
+    name: jurico-backend
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false

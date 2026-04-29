@@ -17,7 +17,7 @@ app.post("/analyze", async (req, res) => {
 
     const input = req.body.text || "kein Text übergeben"
 
-    // ✅ FALLBACK wenn kein API KEY gesetzt
+    // FALLBACK (wenn kein API Key gesetzt)
     if (!process.env.OPENAI_API_KEY) {
       return res.json({
         success: true,
@@ -33,22 +33,11 @@ app.post("/analyze", async (req, res) => {
       })
     }
 
-    // 👉 (Optional später aktivieren)
-    // const OpenAI = require("openai")
-    // const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
-    // const completion = await openai.chat.completions.create({
-    //   model: "gpt-4o-mini",
-    //   messages: [
-    //     { role: "system", content: "Du bist ein juristischer Assistent." },
-    //     { role: "user", content: input }
-    //   ]
-    // })
-
+    // OPTIONAL: OpenAI später aktivieren
     return res.json({
       success: true,
       data: {
-        summary: "Analyse erfolgreich",
+        summary: `Analyse erfolgreich für: ${input}`,
         risk: "mittel",
         next_steps: [
           "Mandant priorisieren",

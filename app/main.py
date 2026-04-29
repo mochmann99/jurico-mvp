@@ -1,11 +1,10 @@
 from fastapi import FastAPI, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import os
 
 app = FastAPI()
 
-# CORS (wichtig für Frontend)
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,43 +13,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Root Test
 @app.get("/")
 def root():
     return {"status": "Jurico läuft 🚀"}
 
-# LOGIN CHECK (optional)
-@app.get("/login")
-def login():
-    return {"message": "Login endpoint aktiv"}
-
-# ANALYSE ENDPOINT (WICHTIG)
 @app.post("/analyze")
 def analyze(beschreibung: str = Form(...)):
     try:
-        # 👉 einfache Logik (funktioniert IMMER)
         text = beschreibung.lower()
 
         if "unfall" in text:
-            return {
+            result = {
                 "bewertung": "hoch",
                 "empfehlung": "Mandat annehmen",
                 "umsatzpotenzial": "3000€"
             }
 
         elif "kündigung" in text:
-            return {
+            result = {
                 "bewertung": "mittel",
                 "empfehlung": "prüfen",
                 "umsatzpotenzial": "1200€"
             }
 
         else:
-            return {
+            result = {
                 "bewertung": "niedrig",
                 "empfehlung": "ablehnen",
                 "umsatzpotenzial": "0€"
             }
+
+        # 👉 WICHTIG: IMMER JSONResponse
+        return JSONResponse(content=result)
 
     except Exception as e:
         return JSONResponse(

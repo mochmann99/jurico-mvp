@@ -1,98 +1,38 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>JURICO MVP</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-<style>
-:root{--gold:#C8A75D;--black:#0A0A0A;--white:#fff;--gray:#f4f4f2;--line:#e8e5dd}
-*{box-sizing:border-box} body{margin:0;font-family:Inter,sans-serif;background:var(--gray);color:var(--black);height:100vh;overflow:hidden}
-.app{height:100vh;display:grid;grid-template-rows:76px 108px 1fr 34px}
-header{background:white;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 34px}
-.logo{font-weight:800;font-size:28px;letter-spacing:1px}.sub{font-size:12px;color:#777}.gold{color:var(--gold)}
-.cta{background:var(--gold);color:white;border:0;border-radius:10px;padding:12px 18px;font-weight:800;cursor:pointer}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:18px 34px}
-.kpi{background:white;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.04)}
-.kpi small{display:block;color:#777;margin-bottom:6px}.kpi b{font-size:24px}
-.main{display:grid;grid-template-columns:1.05fr 1.55fr 1.1fr;gap:16px;padding:0 34px 18px}
-.panel{background:white;border:1px solid var(--line);border-radius:20px;padding:20px;overflow:auto;box-shadow:0 10px 30px rgba(0,0,0,.04)}
-.hero{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-h1{font-family:'Playfair Display',serif;font-size:48px;line-height:1.05;margin:0 0 14px}
-h3{margin:0 0 14px} input,textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;font-family:Inter}
-textarea{height:98px;resize:none}.btn{background:var(--black);color:white;border:0;border-radius:12px;padding:12px 14px;font-weight:800;cursor:pointer;width:100%}
-.btn.goldbtn{background:var(--gold)}.output{white-space:pre-wrap;font-size:14px;line-height:1.45}.log{font-size:12px;color:#555;border-top:1px solid var(--line);margin-top:14px;padding-top:10px}
-footer{text-align:center;color:#777;font-size:12px;padding-top:8px}
-.badge{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;margin-bottom:10px}
-@media(max-width:900px){body{overflow:auto}.app{height:auto;display:block}.kpis,.main{grid-template-columns:1fr}.main{display:grid}h1{font-size:38px}}
-</style>
+  <meta charset="UTF-8">
+  <title>Jurico MVP</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="app">
-<header>
-  <div><div class="logo">JURICO<span class="gold">®</span></div><div class="sub">Innovation. Recht. Zukunft.</div></div>
-  <button class="cta" onclick="analyze()">Analyse starten</button>
-</header>
 
-<section class="kpis">
-  <div class="kpi"><small>Mandanten</small><b id="clients">24</b></div>
-  <div class="kpi"><small>Umsatzpotenzial</small><b><span id="revenue">128450</span> €</b></div>
-  <div class="kpi"><small>Fälle aktiv</small><b id="cases">56</b></div>
-  <div class="kpi"><small>KI-Effizienz</small><b><span id="score">92</span>%</b></div>
-</section>
+<h1>JURICO – Datenanalyse</h1>
 
-<main class="main">
-  <section class="panel">
-    <h3>Mandant erfassen</h3>
-    <input id="name" placeholder="Name">
-    <input id="email" placeholder="E-Mail">
-    <input id="phone" placeholder="Telefon">
-    <textarea id="matter" placeholder="Fall kurz schildern..."></textarea>
-    <button class="btn goldbtn" onclick="analyze()">Fall analysieren</button>
-    <div class="log" id="log">System bereit.</div>
-  </section>
+<h3>Datenquelle wählen</h3>
 
-  <section class="panel hero">
-    <div class="badge">Quick & dirty · keep it smart and simple</div>
-    <h1>Mehr Mandanten.<br>Mehr Umsatz.<br><span class="gold">Automatisch.</span></h1>
-    <p>Ein MVP, der Kanzlei-Leads erfasst, bewertet und verwertbare Erstschritte erzeugt.</p>
-    <button class="cta" onclick="demoLead()">Demo-Lead generieren</button>
-  </section>
+<select id="dataSource">
+  <option value="manual">Manuelle Eingabe</option>
+  <option value="upload">Datei hochladen</option>
+  <option value="outlook">Outlook (Beta)</option>
+  <option value="network">Netzlaufwerk (Beta)</option>
+</select>
 
-  <section class="panel">
-    <h3>KI Output</h3>
-    <div id="output" class="output">Noch keine Analyse.</div>
-  </section>
-</main>
-
-<footer>JURICO® MVP · Annika, Managing Director</footer>
+<div id="manualInput">
+  <textarea id="caseText" placeholder="Fallschilderung"></textarea>
 </div>
 
-<script>
-const $ = id => document.getElementById(id);
-function addLog(text){ $("log").innerHTML = new Date().toLocaleTimeString()+" · "+text+"<br>"+$("log").innerHTML; }
-function bump(){
-  $("clients").textContent = Number($("clients").textContent)+1;
-  $("cases").textContent = Number($("cases").textContent)+1;
-  $("revenue").textContent = Number($("revenue").textContent)+950;
-}
-function demoLead(){ bump(); addLog("Demo-Lead erzeugt"); }
-async function analyze(){
-  const payload = {name:$("name").value,email:$("email").value,phone:$("phone").value,matter:$("matter").value};
-  if(!payload.matter || payload.matter.length < 8){ $("output").textContent = "Bitte zuerst einen konkreten Fall eingeben."; return; }
-  $("output").textContent = "Analyse läuft...";
-  addLog("Analyse gestartet");
-  try{
-    const res = await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-    const data = await res.json();
-    if(!res.ok) throw new Error(data.error || "Fehler");
-    $("output").textContent = data.ai_result;
-    bump(); addLog("Analyse abgeschlossen und Lead gespeichert");
-  }catch(e){
-    $("output").textContent = "Fehler: "+e.message+"\\n\\nOhne OPENAI_API_KEY läuft eine lokale Fallback-Analyse.";
-    addLog("Fehler bei Analyse");
-  }
-}
-</script>
+<div id="uploadInput" style="display:none;">
+  <input type="file" id="fileInput">
+</div>
+
+<br><br>
+<button id="analyzeBtn">Fall analysieren</button>
+
+<h3>Output</h3>
+<pre id="output">Bereit.</pre>
+
+<script src="app.js"></script>
+
 </body>
 </html>

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: jurico-backend
+    name: jurico-mvp
     env: node
     buildCommand: npm install
     startCommand: node server.js

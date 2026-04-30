@@ -1,35 +1,34 @@
-# JURICO MVP – Deploy Ready
+# Jurico AB&C Starter
 
-## Lokal starten
-```bash
-npm install
-cp .env.example .env
-npm start
-```
+Enthalten:
+- A: SQLite Datenbank mit FTS5 Volltextsuche
+- B: Windows UI mit Ordnerauswahl, Indexierung, Suchfeld, Trefferliste, Vorschau, Dokument öffnen
+- C: Basis-KI-Analyse / juristische Entity-Erkennung als erweiterbarer Service
 
-Dann öffnen:
-http://localhost:3000
+## Start
 
-## Ohne API-Key
-Das System startet trotzdem und liefert eine Fallback-Analyse.
+1. Visual Studio öffnen
+2. `Jurico.csproj` öffnen
+3. NuGet Restore ausführen
+4. F5 starten
 
-## Mit OpenAI
-In `.env` eintragen:
-OPENAI_API_KEY=...
+## Nutzung
 
-## Mit Supabase
-1. Supabase-Projekt erstellen
-2. `schema.sql` im Supabase SQL Editor ausführen
-3. SUPABASE_URL und SUPABASE_SERVICE_ROLE_KEY in `.env` eintragen
+1. Ordner wählen
+2. Indexieren
+3. Suchbegriff eingeben
+4. Treffer auswählen
+5. Optional: KI-Analyse klicken
 
-## Deploy
-Render:
-- Repository hochladen
-- `render.yaml` verwenden
-- Umgebungsvariablen setzen
+## Unterstützte Dateien
 
-Docker:
-```bash
-docker build -t jurico-mvp .
-docker run -p 3000:3000 --env-file .env jurico-mvp
-```
+- .txt
+- .pdf
+- .docx
+
+## Nächste Erweiterungen
+
+- Outlook-Indexer
+- Lizenzprüfung
+- echte KI-Anbindung
+- Mandanten-/Akte-Struktur

@@ -1,10 +1,12 @@
 from fastapi import FastAPI, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import os
+from openai import OpenAI
 
 app = FastAPI()
 
-# CORS erlauben (Frontend Zugriff)
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,42 +15,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Root Endpoint (Health Check)
+# OpenAI Client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 @app.get("/")
 def root():
-    return {"status": "Jurico läuft stabil"}
+    return {"status": "Jurico AI läuft"}
 
-# Analyse Endpoint (STABIL – KEIN JSON ERROR MEHR)
 @app.post("/analyze")
 def analyze(beschreibung: str = Form(...)):
     try:
-        text = beschreibung.lower()
+        prompt = f"""
+Du bist ein erfahrener deutscher Rechtsanwalt.
 
-        if "unfall" in text:
-            result = {
-                "bewertung": "hoch",
-                "empfehlung": "Mandat annehmen",
-                "umsatzpotenzial": "3000€"
-            }
+Analysiere folgenden Fall:
 
-        elif "kündigung" in text:
-            result = {
-                "bewertung": "mittel",
-                "empfehlung": "prüfen",
-                "umsatzpotenzial": "1200€"
-            }
+"{beschreibung}"
 
-        else:
-            result = {
-                "bewertung": "niedrig",
-                "empfehlung": "ablehnen",
-                "umsatzpotenzial": "0€"
-            }
+Bewerte:
+1. Mandatswahrscheinlichkeit (hoch/mittel/niedrig)
+2. Empfehlung (annehmen/prüfen/ablehnen)
+3. Umsatzpotenzial (geschätzt in €)
 
-        return JSONResponse(content=result)
+Antwort nur als JSON:
+
+{{
+  "bewertung": "...",
+  "empfehlung": "...",
+  "umsatzpotenzial": "..."
+}}
+"""
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        content = response.choices[0].message.content
+
+        return JSONResponse(content={"result": content})
 
     except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
+        return JSONResponse(status_code=500, content={"error": str(e)})

@@ -29,20 +29,10 @@ async def analyze(request: AnalyzeRequest):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {
-                    "role": "system",
-                    "content": "Du bist ein juristischer KI-Assistent. Analysiere strukturiert und präzise."
-                },
-                {
-                    "role": "user",
-                    "content": request.beschreibung
-                }
+                {"role": "system", "content": "Du bist ein juristischer KI-Assistent."},
+                {"role": "user", "content": request.beschreibung}
             ]
         )
-
-        return {
-            "analyse": response.choices[0].message.content
-        }
-
+        return {"analyse": response.choices[0].message.content}
     except Exception as e:
         return {"error": str(e)}

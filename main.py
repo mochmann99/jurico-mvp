@@ -3,9 +3,19 @@ from pydantic import BaseModel
 from openai import OpenAI
 import os
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
 
-# OpenAI Client (zieht automatisch ENV Variable)
+# CORS FREIGEBEN (WICHTIG!)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # später einschränken
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class RequestData(BaseModel):

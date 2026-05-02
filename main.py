@@ -1,82 +1,142 @@
 import os
-from fastapi import FastAPI
+import stripe
+import sqlite3
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from openai import OpenAI
+from fastapi.responses import FileResponse
+from dotenv import load_dotenv
 
-app = FastAPI(title="Jurico AI V2")
+load_dotenv()
+
+app = FastAPI()
 
 app.add_middleware(
-CORSMiddleware,
-allow_origins=["*"],
-allow_credentials=False,
-allow_methods=["*"],
-allow_headers=["*"],
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Stripe Setup
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
+# Database
+conn = sqlite3.connect("jurico.db", check_same_thread=False)
+cursor = conn.cursor()
 
-class AnalyzeRequest(BaseModel):
-beschreibung: str
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE,
+    role TEXT DEFAULT 'free'
+)
+""")
 
+conn.commit()
+
+# ---------------- ROOT ----------------
 
 @app.get("/")
 def root():
-return {"status": "Jurico AI V2 läuft"}
+    return FileResponse("static/index.html")
 
+# ---------------- ANALYZE ----------------
 
 @app.post("/analyze")
-def analyze(data: AnalyzeRequest):
-try:
-text = data.beschreibung.strip()
+async def analyze(request: Request):
+    data = await request.json()
+    email = data.get("email")
 
-if not text:
-return {
-"error": "Bitte einen Vertrag, Fall oder Sachverhalt eingeben."
-}
+    if not email:
+        raise HTTPException(status_code=400, detail="Email required")
 
-prompt = f"""
-Du bist Jurico AI, ein spezialisierter deutscher Legal-Tech-Assistent.
+    cursor.execute("SELECT role FROM users WHERE email=?", (email,))
+    user = cursor.fetchone()
 
-Analysiere den folgenden Sachverhalt oder Vertrag professionell, aber verständlich.
+    if not user or user[0] != "pro":
+        raise HTTPException(status_code=403, detail="Upgrade required")
 
-Wichtiger Hinweis:
-Du ersetzt keine anwaltliche Beratung. Formuliere sachlich, strukturiert und vorsichtig.
+    text = data.get("text")
 
-Gib die Antwort exakt in dieser Struktur aus:
+    # Demo Analyse (hier später OpenAI)
+    result = f"""
+Analyse:
 
-1. Kurzbewertung
-2. Risiko-Score von 0 bis 100
-3. Zentrale rechtliche Punkte
-4. Mögliche Risiken
-5. Handlungsempfehlung
-6. Kurzfazit
+Kurzbewertung:
+Der Vertrag enthält typische Risiken.
 
-Text/Sachverhalt:
-{text}
+Risiko-Score:
+68 / 100
+
+Empfehlung:
+Klauseln prüfen lassen.
 """
 
-response = client.chat.completions.create(
-model="gpt-4o-mini",
-messages=[
-{
-"role": "system",
-"content": "Du bist ein präziser deutscher Legal-Tech-Assistent für Vertrags- und Fallanalysen."
-},
-{
-"role": "user",
-"content": prompt
-}
-],
-temperature=0.2
-)
+    return {"result": result}
 
-return {
-"analyse": response.choices[0].message.content
-}
+# ---------------- CHECKOUT ----------------
 
-except Exception as e:
-return {
-"error": str(e)
-} 
+@app.post("/create-checkout-session")
+async def create_checkout_session(request: Request):
+    data = await request.json()
+    email = data.get("email")
+
+    if not email:
+        raise HTTPException(status_code=400, detail="Email required")
+
+    session = stripe.checkout.Session.create(
+        payment_method_types=["card"],
+        mode="subscription",
+        customer_email=email,
+        line_items=[{
+            "price": os.getenv("STRIPE_PRICE_ID"),
+            "quantity": 1,
+        }],
+        success_url=os.getenv("BASE_URL") + "/success",
+        cancel_url=os.getenv("BASE_URL") + "/cancel",
+    )
+
+    return {"url": session.url}
+
+# ---------------- WEBHOOK ----------------
+
+@app.post("/webhook")
+async def webhook(request: Request):
+
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload,
+            sig_header,
+            os.getenv("STRIPE_WEBHOOK_SECRET")
+        )
+    except Exception as e:
+        return {"error": str(e)}
+
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        email = session["customer_email"]
+
+        cursor.execute("SELECT id FROM users WHERE email=?", (email,))
+        user = cursor.fetchone()
+
+        if user:
+            cursor.execute("UPDATE users SET role='pro' WHERE email=?", (email,))
+        else:
+            cursor.execute("INSERT INTO users (email, role) VALUES (?, 'pro')", (email,))
+
+        conn.commit()
+
+    return {"status": "ok"}
+
+# ---------------- SUCCESS / CANCEL ----------------
+
+@app.get("/success")
+def success():
+    return {"message": "Zahlung erfolgreich! Zugriff freigeschaltet."}
+
+@app.get("/cancel")
+def cancel():
+    return {"message": "Zahlung abgebrochen."}

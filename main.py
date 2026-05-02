@@ -1,27 +1,22 @@
-import os
 from fastapi import FastAPI
-from pydantic import BaseModel
-from openai import OpenAI
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-class AnalyzeRequest(BaseModel):
-    beschreibung: str
+# 🔥 DAS IST DER FIX
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def root():
     return {"status": "Jurico AI läuft"}
 
 @app.post("/analyze")
-def analyze(request: AnalyzeRequest):
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "Du bist ein juristischer KI-Assistent."},
-            {"role": "user", "content": request.beschreibung}
-        ]
-    )
-
-    return {"analyse": response.choices[0].message.content}
+def analyze(data: dict):
+    text = data.get("beschreibung", "")
+    return {"analyse": f"Analyse von: {text}"}

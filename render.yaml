@@ -1,6 +1,10 @@
 services:
   - type: web
-    name: jurico-frontend
-    env: static
-    buildCommand: ""
-    staticPublishPath: .
+    name: jurico
+    env: python
+    plan: starter
+    buildCommand: "poetry install"
+    startCommand: "poetry run uvicorn main:app --host 0.0.0.0 --port 10000"
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false

@@ -1,24 +1,28 @@
 import os
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
 
-# FastAPI App initialisieren
 app = FastAPI()
 
-# OpenAI Client
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Request Schema
 class AnalyzeRequest(BaseModel):
     beschreibung: str
 
-# Root Endpoint (Health Check)
 @app.get("/")
 def root():
     return {"status": "Jurico AI läuft"}
 
-# Analyse Endpoint
 @app.post("/analyze")
 async def analyze(request: AnalyzeRequest):
     try:
@@ -27,7 +31,7 @@ async def analyze(request: AnalyzeRequest):
             messages=[
                 {
                     "role": "system",
-                    "content": "Du bist ein juristischer KI-Assistent. Analysiere den Fall strukturiert und verständlich."
+                    "content": "Du bist ein juristischer KI-Assistent. Analysiere strukturiert und präzise."
                 },
                 {
                     "role": "user",
@@ -41,6 +45,4 @@ async def analyze(request: AnalyzeRequest):
         }
 
     except Exception as e:
-        return {
-            "error": str(e)
-        }
+        return {"error": str(e)}

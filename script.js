@@ -1,11 +1,20 @@
+const API_URL = "https://jurico.onrender.com/analyze";
+
+document.getElementById("analyzeBtn").addEventListener("click", analyze);
+
 async function analyze() {
-    const text = document.getElementById("inputText").value;
+    const text = document.getElementById("inputText").value.trim();
     const resultDiv = document.getElementById("result");
+
+    if (!text) {
+        resultDiv.innerHTML = "Bitte Beschreibung eingeben.";
+        return;
+    }
 
     resultDiv.innerHTML = "⏳ Analysiere...";
 
     try {
-        const response = await fetch("https://jurico.onrender.com/analyze", {
+        const response = await fetch(API_URL, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -19,8 +28,10 @@ async function analyze() {
 
         if (data.analyse) {
             resultDiv.innerHTML = data.analyse;
+        } else if (data.error) {
+            resultDiv.innerHTML = "Fehler: " + data.error;
         } else {
-            resultDiv.innerHTML = "❌ Fehler: " + JSON.stringify(data);
+            resultDiv.innerHTML = "Unbekannte Antwort: " + JSON.stringify(data);
         }
 
     } catch (error) {

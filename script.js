@@ -1,22 +1,29 @@
-async function analyzeCase() {
-    const formData = new FormData();
-    formData.append("beschreibung", document.querySelector("textarea").value);
+async function analyze() {
+    const text = document.getElementById("inputText").value;
+    const resultDiv = document.getElementById("result");
 
-    const response = await fetch("/analyze", {
-        method: "POST",
-        body: formData
-    });
+    resultDiv.innerHTML = "⏳ Analysiere...";
 
-    const data = await response.json();
+    try {
+        const response = await fetch("https://jurico.onrender.com/analyze", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                beschreibung: text
+            })
+        });
 
-    if (data.error) {
-        document.getElementById("output").innerHTML = "Fehler: " + data.error;
-        return;
+        const data = await response.json();
+
+        if (data.analyse) {
+            resultDiv.innerHTML = data.analyse;
+        } else {
+            resultDiv.innerHTML = "❌ Fehler: " + JSON.stringify(data);
+        }
+
+    } catch (error) {
+        resultDiv.innerHTML = "❌ Verbindung fehlgeschlagen";
     }
-
-    document.getElementById("output").innerHTML = `
-        <b>Bewertung:</b> ${data.bewertung}<br>
-        <b>Empfehlung:</b> ${data.empfehlung}<br>
-        <b>Umsatzpotenzial:</b> ${data.umsatzpotenzial} €
-    `;
 }

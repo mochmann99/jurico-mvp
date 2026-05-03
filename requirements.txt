@@ -2,3 +2,5 @@ fastapi
 uvicorn[standard]
 stripe
 python-dotenv
+openai
+reportlab

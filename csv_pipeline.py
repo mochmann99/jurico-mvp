@@ -18,7 +18,7 @@ keywords = {
 }
 
 # 👉 CSV laden (robust gegen Outlook-Format)
-df = pd.read_csv(CSV_PATH, encoding="utf-8", sep=None, engine="python")
+df = pd.read_csv(CSV_PATH, encoding="latin1", sep=";", on_bad_lines="skip")
 
 print("Spalten erkannt:", df.columns.tolist())
 

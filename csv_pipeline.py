@@ -2,7 +2,10 @@ import pandas as pd
 import sqlite3
 from pathlib import Path
 
-CSV_PATH = r"C:\JURICO\manual_export.csv"
+# 👉 DEIN CSV-PFAD
+CSV_PATH = r"Z:\20.06.2006\Projekte\ChatGPT\manual_export.csv"
+
+# 👉 OUTPUT bleibt gleich
 DB_PATH = r"C:\JURICO\cmmi_output\jurico_csv.db"
 OUT_PATH = r"C:\JURICO\cmmi_output\ZDF_Fundstellen.csv"
 
@@ -14,7 +17,10 @@ keywords = {
     "accident": ["Generali", "Unfall"]
 }
 
-df = pd.read_csv(CSV_PATH, encoding="utf-8", sep=",", engine="python")
+# 👉 CSV laden (robust gegen Outlook-Format)
+df = pd.read_csv(CSV_PATH, encoding="utf-8", sep=None, engine="python")
+
+print("Spalten erkannt:", df.columns.tolist())
 
 conn = sqlite3.connect(DB_PATH)
 cur = conn.cursor()
@@ -40,16 +46,18 @@ def match(text):
 
 for _, row in df.iterrows():
     text = str(row)
+
     hits = match(text)
+
     for cat, kw in hits:
         cur.execute("""
         INSERT INTO evidence VALUES (?, ?, ?, ?, ?, ?)
         """, (
-            row.get("Received", ""),
+            str(row.get("Received", "")),
             cat,
             kw,
-            row.get("Subject", ""),
-            row.get("From", ""),
+            str(row.get("Subject", "")),
+            str(row.get("From", "")),
             text[:300]
         ))
 
